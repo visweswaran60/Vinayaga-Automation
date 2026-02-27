@@ -1,23 +1,34 @@
 /**
  * Helper functions for Branch Patients functionality
+ * INCLUDES HOSPITAL-LEVEL (TENANT) ISOLATION
  */
 
+import { filterByHospital } from './tenantHelpers';
+
 /**
- * Get all registered branches from localStorage
- * @returns {Array} Array of branch objects
+ * Get all registered branches from localStorage with hospital isolation
+ * CRITICAL: Only returns branches belonging to current hospital
+ * @returns {Array} Array of branch objects for current hospital
  */
 export const getRegisteredBranches = () => {
     const saved = localStorage.getItem('registeredBranches');
-    return saved ? JSON.parse(saved) : [];
+    const allBranches = saved ? JSON.parse(saved) : [];
+    
+    // CRITICAL: Filter by hospital ID first
+    return filterByHospital(allBranches);
 };
 
 /**
- * Get all saved forms/patients from localStorage
- * @returns {Array} Array of form objects
+ * Get all saved forms/patients from localStorage with hospital isolation
+ * CRITICAL: Only returns forms belonging to current hospital
+ * @returns {Array} Array of form objects for current hospital
  */
 export const getSavedForms = () => {
     const saved = localStorage.getItem('savedForms');
-    return saved ? JSON.parse(saved) : [];
+    const allForms = saved ? JSON.parse(saved) : [];
+    
+    // CRITICAL: Filter by hospital ID first
+    return filterByHospital(allForms);
 };
 
 /**

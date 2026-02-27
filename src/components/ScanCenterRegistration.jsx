@@ -10,6 +10,7 @@ const ScanCenterRegistration = ({ onRegister, onCancel }) => {
         hospitalName: '',
         directorName: '',
         masterEmail: '',
+        masterPassword: '',
         phone: '',
         numBranches: 1
     });
@@ -82,9 +83,16 @@ const ScanCenterRegistration = ({ onRegister, onCancel }) => {
         console.log('🏥 REGISTRATION STARTED');
         console.log('═══════════════════════════════════════');
 
-        if (!orgData.hospitalName || !orgData.masterEmail) {
-            console.warn('❌ Validation failed: Missing hospital name or email');
-            alert('Please fill out the main hospital name and email.');
+        if (!orgData.hospitalName || !orgData.masterEmail || !orgData.masterPassword) {
+            console.warn('❌ Validation failed: Missing hospital name, email, or password');
+            alert('Please fill out the hospital name, master email, and master password.');
+            return;
+        }
+
+        // Director password validation
+        if (orgData.masterPassword.length < 6) {
+            console.warn('❌ Validation failed: Director password too short');
+            alert('Master password must be at least 6 characters.');
             return;
         }
 
@@ -114,7 +122,33 @@ const ScanCenterRegistration = ({ onRegister, onCancel }) => {
         const createdBranches = [];
 
         try {
-            // ─── STEP 2: Create Firebase Auth user for each branch ───
+            // ─── STEP 2: Create Director Firebase Auth Account ───
+            setRegistrationStatus('Creating director account...');
+            console.log('\n── Creating Director Account ──');
+            console.log(`📧 Email: ${orgData.masterEmail}`);
+            console.log(`🔑 Password: ${orgData.masterPassword}`);
+
+            let directorAuthUid = 'none';
+            try {
+                const directorCredential = await withTimeout(
+                    createUserWithEmailAndPassword(auth, orgData.masterEmail, orgData.masterPassword),
+                    15000,
+                    `Director account creation for ${orgData.masterEmail}`
+                );
+                directorAuthUid = directorCredential.user.uid;
+                console.log(`✅ [Auth] Director account created — UID: ${directorAuthUid}`);
+            } catch (authErr) {
+                const msg = getFirebaseErrorMessage(authErr);
+                console.error(`❌ [Auth] Failed for director ${orgData.masterEmail}:`, authErr);
+                console.error(`   → ${msg}`);
+                if (authErr?.code === 'auth/email-already-in-use') {
+                    console.warn(`⚠️ [Auth] Director account already exists, continuing...`);
+                } else {
+                    throw authErr;
+                }
+            }
+
+            // ─── STEP 3: Create Firebase Auth user for each branch ───
             for (let i = 0; i < validBranches.length; i++) {
                 const branch = validBranches[i];
                 const password = branch.password;
@@ -147,17 +181,24 @@ const ScanCenterRegistration = ({ onRegister, onCancel }) => {
                     }
                 }
 
+                // Generate hospitalId for this organization
+                const hospitalId = `hospital_${orgData.masterEmail.split('@')[0]}_${orgId}`;
+
                 const branchData = {
+                    id: branchId,
+                    hospitalId: hospitalId, // CRITICAL: Add hospitalId for tenant isolation
                     branchName: branch.branchName,
                     location: branch.location,
                     branchEmail: branch.branchEmail,
                     hospitalName: orgData.hospitalName,
                     directorName: orgData.directorName,
+                    directorEmail: orgData.masterEmail, // Link branch to director
                     masterEmail: orgData.masterEmail,
                     password: password,
                     orgId: orgId,
                     branchId: branchId,
                     authUid: authUid,
+                    isActive: true,
                     createdAt: new Date().toISOString()
                 };
 
@@ -176,6 +217,38 @@ const ScanCenterRegistration = ({ onRegister, onCancel }) => {
             existingOrgs.push({ ...orgData, id: orgId, createdAt: new Date().toISOString() });
             localStorage.setItem('organizations', JSON.stringify(existingOrgs));
 
+            // Save user roles
+            const users = JSON.parse(localStorage.getItem('users') || '[]');
+            
+            // Get hospitalId from first created branch
+            const hospitalId = createdBranches[0]?.hospitalId;
+            
+            // Add director role
+            if (!users.find(u => u.email === orgData.masterEmail)) {
+                users.push({
+                    email: orgData.masterEmail,
+                    role: 'director',
+                    name: orgData.directorName,
+                    hospitalId: hospitalId, // Add hospitalId
+                    createdAt: new Date().toISOString()
+                });
+            }
+            
+            // Add branch user roles
+            createdBranches.forEach(branch => {
+                if (!users.find(u => u.email === branch.branchEmail)) {
+                    users.push({
+                        email: branch.branchEmail,
+                        role: 'branch',
+                        branchName: branch.branchName,
+                        hospitalId: branch.hospitalId, // Add hospitalId
+                        createdAt: new Date().toISOString()
+                    });
+                }
+            });
+            
+            localStorage.setItem('users', JSON.stringify(users));
+
             console.log('✅ [localStorage] Data saved');
 
             // ─── STEP 4: Sign out (createUserWithEmailAndPassword auto-signs in) ───
@@ -190,6 +263,7 @@ const ScanCenterRegistration = ({ onRegister, onCancel }) => {
             console.log('═══════════════════════════════════════');
             console.log('📊 Summary:');
             console.log(`   Organization: ${orgData.hospitalName} (${orgId})`);
+            console.log(`   Director: ${orgData.masterEmail} (UID: ${directorAuthUid})`);
             console.log(`   Branches created: ${createdBranches.length}`);
             createdBranches.forEach(b => {
                 console.log(`   • ${b.branchEmail} → ${b.password} (UID: ${b.authUid})`);
@@ -197,10 +271,12 @@ const ScanCenterRegistration = ({ onRegister, onCancel }) => {
 
             alert(
                 `✅ Registration Successful!\n\n` +
-                `Organization: ${orgData.hospitalName}\n` +
-                `${createdBranches.length} branch(es) registered in Firebase Auth.\n\n` +
-                `Login credentials:\n` +
-                createdBranches.map(b => `• ${b.branchEmail} → ${b.password}`).join('\n')
+                `Organization: ${orgData.hospitalName}\n\n` +
+                `Director Login (Full Access):\n` +
+                `• ${orgData.masterEmail} → ${orgData.masterPassword}\n\n` +
+                `Branch Logins:\n` +
+                createdBranches.map(b => `• ${b.branchEmail} → ${b.password}`).join('\n') +
+                `\n\n${createdBranches.length} branch(es) registered in Firebase Auth.`
             );
 
             onRegister({ organization: orgData, branches: createdBranches });
@@ -262,12 +338,18 @@ const ScanCenterRegistration = ({ onRegister, onCancel }) => {
                     <div>
                         <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: '#4b5563' }}>Master Email ID *</label>
                         <input type="email" name="masterEmail" value={orgData.masterEmail} onChange={handleOrgChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', boxSizing: 'border-box' }} placeholder="admin@hospital.com" />
+                        <p style={{ margin: '0.35rem 0 0', fontSize: '0.75rem', color: '#059669', fontWeight: 600 }}>Director login - Full access to all branches</p>
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: '#4b5563' }}>Master Password *</label>
+                        <input type="password" name="masterPassword" value={orgData.masterPassword} onChange={handleOrgChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', boxSizing: 'border-box' }} placeholder="Min 6 characters" />
+                        <p style={{ margin: '0.35rem 0 0', fontSize: '0.75rem', color: '#6b7280' }}>Used with master email to login</p>
                     </div>
                     <div>
                         <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: '#4b5563' }}>Phone Number</label>
                         <input type="text" name="phone" value={orgData.phone} onChange={handleOrgChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', boxSizing: 'border-box' }} placeholder="Contact Number" />
                     </div>
-                    <div style={{ gridColumn: '1 / -1' }}>
+                    <div>
                         <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: '#4b5563' }}>Number of Branches</label>
                         <select name="numBranches" value={orgData.numBranches} onChange={handleOrgChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none', backgroundColor: '#fff' }}>
                             {[...Array(10)].map((_, i) => (

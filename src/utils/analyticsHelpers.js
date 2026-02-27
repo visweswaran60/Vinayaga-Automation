@@ -1,6 +1,27 @@
 /**
  * Analytics calculation utilities for dashboard metrics
+ * INCLUDES HOSPITAL-LEVEL (TENANT) ISOLATION
  */
+
+import { filterByHospital, getCurrentHospitalId } from './tenantHelpers';
+
+/**
+ * Get all forms with hospital isolation applied
+ * CRITICAL: Always filters by current hospital first
+ */
+export const getAllForms = () => {
+    const allForms = JSON.parse(localStorage.getItem('savedForms') || '[]');
+    return filterByHospital(allForms);
+};
+
+/**
+ * Get all branches with hospital isolation applied
+ * CRITICAL: Always filters by current hospital first
+ */
+export const getAllBranches = () => {
+    const allBranches = JSON.parse(localStorage.getItem('registeredBranches') || '[]');
+    return filterByHospital(allBranches);
+};
 
 /**
  * Get date range based on filter selection
@@ -17,7 +38,8 @@ export const getDateRangeStart = (range) => {
 
 /**
  * Filter forms by date range and branch
- * @param {Array} forms - All forms
+ * NOTE: Input forms should already be hospital-filtered via getAllForms()
+ * @param {Array} forms - Hospital-filtered forms
  * @param {string} dateRange - Date range filter
  * @param {string} branchEmail - Branch email filter (null for all)
  * @returns {Array} Filtered forms
@@ -180,20 +202,5 @@ export const calculateOverallNotificationRate = (forms) => {
     return maxPossible > 0 ? Math.round((totalNotifications / maxPossible) * 100) : 0;
 };
 
-/**
- * Get all forms from localStorage
- * @returns {Array} All forms
- */
-export const getAllForms = () => {
-    const saved = localStorage.getItem('savedForms');
-    return saved ? JSON.parse(saved) : [];
-};
 
-/**
- * Get all branches from localStorage
- * @returns {Array} All branches
- */
-export const getAllBranches = () => {
-    const saved = localStorage.getItem('registeredBranches');
-    return saved ? JSON.parse(saved) : [];
-};
+

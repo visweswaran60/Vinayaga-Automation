@@ -6,6 +6,12 @@ import ReferralForm from './components/ReferralForm';
 import './index.css';
 import { auth } from './config/firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import { 
+  setCurrentHospitalId, 
+  clearHospitalContext, 
+  deriveHospitalIdFromEmail,
+  migrateLegacyData 
+} from './utils/tenantHelpers';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('auth');
@@ -40,6 +46,9 @@ function App() {
   useEffect(() => {
     console.log('🔄 [App] Setting up Firebase Auth listener...');
 
+    // Run data migration on app start
+    migrateLegacyData();
+
     // Safety timeout — if Firebase doesn't respond in 5s, show login page
     const safetyTimer = setTimeout(() => {
       console.warn('⚠️ [App] Firebase Auth took too long, defaulting to auth page');
@@ -50,6 +59,12 @@ function App() {
       clearTimeout(safetyTimer);
       if (user) {
         console.log('✅ [App] User detected:', user.email, 'UID:', user.uid);
+        
+        // CRITICAL: Set hospital context for tenant isolation
+        const hospitalId = deriveHospitalIdFromEmail(user.email);
+        setCurrentHospitalId(hospitalId);
+        console.log('✅ [App] Hospital context set:', hospitalId);
+        
         // Look up branch data from localStorage
         const branches = JSON.parse(localStorage.getItem('registeredBranches') || '[]');
         const branch = branches.find(b => b.branchEmail.toLowerCase() === user.email.toLowerCase());
@@ -66,6 +81,8 @@ function App() {
       } else {
         console.log('ℹ️ [App] No user signed in');
         setLoggedInBranch(null);
+        // Clear hospital context on sign out
+        clearHospitalContext();
       }
       setAuthLoading(false);
     });
@@ -149,6 +166,10 @@ function App() {
       console.log('🔓 [Auth] Signing out...');
       await signOut(auth);
       console.log('✅ [Auth] Signed out');
+      
+      // CRITICAL: Clear hospital context on logout
+      clearHospitalContext();
+      
       localStorage.removeItem('currentPage');
       setLoggedInBranch(null);
       navigate('auth');

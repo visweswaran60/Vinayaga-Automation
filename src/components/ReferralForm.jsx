@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import DiagnosticServices from './DiagnosticServices';
 import ManageForms from './ManageForms';
@@ -6,6 +6,10 @@ import EmailSettings from './EmailSettings';
 import ManageDoctors from './ManageDoctors';
 import BranchPatients from './BranchPatients';
 import AnalyticsDashboard from './AnalyticsDashboard';
+import ManageBranches from './ManageBranches';
+import BranchSwitcher from './BranchSwitcher';
+import { getUserRole, isDirector, getEffectiveBranchEmail, getBranchDisplayName } from '../utils/roleHelpers';
+import { addHospitalId } from '../utils/tenantHelpers';
 import {
     PlusSquare,
     FileText,
@@ -28,6 +32,34 @@ import {
 } from 'lucide-react';
 
 const ReferralForm = ({ onLogout, loggedInBranch, savedDoctors = [], onAddDoctor, onDeleteDoctor, userEmail = '', savedBranches = [] }) => {
+    const [userRole, setUserRole] = useState('branch');
+    const [effectiveBranchEmail, setEffectiveBranchEmail] = useState(null);
+    const [activeBranch, setActiveBranch] = useState(null);
+    const [hospitalName, setHospitalName] = useState('');
+
+    // Initialize user role and active branch on mount
+    useEffect(() => {
+        const role = getUserRole(userEmail);
+        setUserRole(role);
+        const branchEmail = getEffectiveBranchEmail(userEmail, role);
+        setEffectiveBranchEmail(branchEmail);
+        
+        // Load active branch for directors
+        if (role === 'director') {
+            const savedActiveBranch = localStorage.getItem('activeBranch');
+            if (savedActiveBranch) {
+                setActiveBranch(JSON.parse(savedActiveBranch));
+            }
+            
+            // Load hospital name
+            const branches = JSON.parse(localStorage.getItem('registeredBranches') || '[]');
+            const userBranch = branches.find(b => b.directorEmail === userEmail);
+            setHospitalName(userBranch?.hospitalName || 'Hospital');
+        } else {
+            // For branch users, use their branch name
+            setHospitalName(loggedInBranch?.branchName || 'Branch');
+        }
+    }, [userEmail, loggedInBranch]);
     const [activeStep, setActiveStep] = useState(1);
     const diagnosticRef = useRef(null);
     const dicomRef = useRef(null);
@@ -159,13 +191,25 @@ const ReferralForm = ({ onLogout, loggedInBranch, savedDoctors = [], onAddDoctor
     };
 
     const handleSubmit = () => {
+        // SAFETY CHECK: Directors must have a branch selected
+        if (isDirector(userEmail) && !activeBranch) {
+            alert('Please select a branch before creating a referral form.');
+            return;
+        }
+        
         // Final validation before submission
         if (!validateStep(1) || !validateStep(2) || !validateStep(3) || !validateStep(4)) {
             alert('Please complete all required fields before submitting the form.');
             return;
         }
 
-        const newForm = {
+        // Determine branch email: use activeBranch for directors, loggedInBranch for branch users
+        const targetBranchEmail = isDirector(userEmail) 
+            ? activeBranch?.branchEmail 
+            : (loggedInBranch?.branchEmail || userEmail);
+
+        // CRITICAL: Add hospitalId for tenant isolation
+        const newForm = addHospitalId({
             id: Date.now(),
             createdAt: new Date().toISOString(),
             archived: false,
@@ -184,8 +228,8 @@ const ReferralForm = ({ onLogout, loggedInBranch, savedDoctors = [], onAddDoctor
             clinicalNotes,
             diagnosticServices,
             services: referralReasons,
-            branchEmail: loggedInBranch?.branchEmail || userEmail
-        };
+            branchEmail: targetBranchEmail // Use determined branch email
+        });
         
         setSavedForms(prev => {
             const updated = [newForm, ...prev];
@@ -251,6 +295,13 @@ const ReferralForm = ({ onLogout, loggedInBranch, savedDoctors = [], onAddDoctor
         { icon: Settings, label: 'Email Settings' },
     ];
 
+    // Add Manage Branches for directors only
+    const directorItems = isDirector(userEmail) 
+        ? [{ icon: Building2, label: 'Manage Branches' }]
+        : [];
+
+    const allSidebarItems = [...sidebarItems, ...directorItems];
+
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -293,7 +344,12 @@ const ReferralForm = ({ onLogout, loggedInBranch, savedDoctors = [], onAddDoctor
             alert("This doctor is already in your managed list.");
             return;
         }
-        onAddDoctor({ ...formData, branchEmail: loggedInBranch?.branchEmail });
+        // CRITICAL: Add hospitalId for tenant isolation
+        const doctorData = addHospitalId({ 
+            ...formData, 
+            branchEmail: loggedInBranch?.branchEmail 
+        });
+        onAddDoctor(doctorData);
         alert("Doctor saved to Manage Doctors list!");
     };
 
@@ -334,16 +390,42 @@ const ReferralForm = ({ onLogout, loggedInBranch, savedDoctors = [], onAddDoctor
                 </div>
 
                 <nav className="sidebar-nav">
-                    {sidebarItems.map((item, idx) => (
-                        <button
-                            key={idx}
-                            className={`nav-item ${activeSidebarItem === item.label ? 'active' : ''}`}
-                            onClick={() => setActiveSidebarItem(item.label)}
-                        >
-                            <item.icon size={18} />
-                            <span>{item.label}</span>
-                        </button>
-                    ))}
+                    {allSidebarItems.map((item, idx) => {
+                        // Check if Create Form should be disabled for directors without active branch
+                        const isCreateForm = item.label === 'Create Form';
+                        const isDisabled = isCreateForm && isDirector(userEmail) && !activeBranch;
+                        
+                        return (
+                            <button
+                                key={idx}
+                                className={`nav-item ${activeSidebarItem === item.label ? 'active' : ''} ${isDisabled ? 'disabled' : ''}`}
+                                onClick={() => {
+                                    if (isDisabled) {
+                                        alert('Please select a branch from the dropdown above to create a referral form.');
+                                        return;
+                                    }
+                                    setActiveSidebarItem(item.label);
+                                }}
+                                disabled={isDisabled}
+                                title={isDisabled ? 'Select a branch to create referrals' : ''}
+                            >
+                                <item.icon size={18} />
+                                <span>{item.label}</span>
+                                {isDisabled && (
+                                    <span style={{ 
+                                        marginLeft: 'auto', 
+                                        fontSize: '0.7rem', 
+                                        opacity: 0.6,
+                                        background: 'rgba(255,255,255,0.1)',
+                                        padding: '0.15rem 0.4rem',
+                                        borderRadius: '4px'
+                                    }}>
+                                        Select Branch
+                                    </span>
+                                )}
+                            </button>
+                        );
+                    })}
                 </nav>
 
                 <div className="sidebar-footer">
@@ -385,11 +467,47 @@ const ReferralForm = ({ onLogout, loggedInBranch, savedDoctors = [], onAddDoctor
             {/* Main Content */}
             <main className="referral-content">
                 <div className="top-banner glass-morphism">
+                    {/* Branch Switcher for Directors */}
+                    {isDirector(userEmail) && (
+                        <BranchSwitcher 
+                            userEmail={userEmail}
+                            userRole={userRole}
+                            onBranchChange={(branch) => {
+                                const branchEmail = branch ? branch.branchEmail : null;
+                                setEffectiveBranchEmail(branchEmail);
+                                setActiveBranch(branch); // Update active branch state
+                            }}
+                        />
+                    )}
+                    
+                    {/* Hospital/Branch Name Display */}
                     <div className="active-branch-chip">
-                        <MapPin size={14} />
-                        <span>Active Branch:</span>
-                        <span className="branch-name">{loggedInBranch?.branchName || 'Main Clinic'}</span>
-                        {loggedInBranch?.location && <span style={{ marginLeft: '8px', opacity: 0.8, fontSize: '0.9em' }}>({loggedInBranch.location})</span>}
+                        {isDirector(userEmail) ? (
+                            <>
+                                {/* Director: Show Hospital Name */}
+                                <Building2 size={14} />
+                                <span>{hospitalName}</span>
+                                {activeBranch && (
+                                    <>
+                                        <span style={{ margin: '0 0.5rem', opacity: 0.5 }}>•</span>
+                                        <MapPin size={14} />
+                                        <span className="branch-name">{activeBranch.branchName}</span>
+                                    </>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                {/* Branch User: Show Branch Name */}
+                                <MapPin size={14} />
+                                <span>Active Branch:</span>
+                                <span className="branch-name">{loggedInBranch?.branchName || 'Branch'}</span>
+                                {loggedInBranch?.location && (
+                                    <span style={{ marginLeft: '8px', opacity: 0.8, fontSize: '0.9em' }}>
+                                        ({loggedInBranch.location})
+                                    </span>
+                                )}
+                            </>
+                        )}
                     </div>
                 </div>
 
@@ -421,75 +539,24 @@ const ReferralForm = ({ onLogout, loggedInBranch, savedDoctors = [], onAddDoctor
                     )}
 
                     {/* ── ANALYTICS DASHBOARD VIEW ── */}
-                    {activeSidebarItem === 'Analytics' && <AnalyticsDashboard />}
+                    {activeSidebarItem === 'Analytics' && <AnalyticsDashboard userEmail={userEmail} />}
 
                     {/* ── MANAGE DOCTORS VIEW ── */}
                     {activeSidebarItem === 'Manage Doctors' && (
                         <ManageDoctors
                             activeBranch={loggedInBranch?.branchName || 'Main Clinic'}
                             savedDoctors={savedDoctors.filter(d => !d.branchEmail || d.branchEmail === loggedInBranch?.branchEmail)}
-                            onAddDoctor={(doc) => onAddDoctor({ ...doc, branchEmail: loggedInBranch?.branchEmail })}
+                            onAddDoctor={(doc) => onAddDoctor(addHospitalId({ ...doc, branchEmail: loggedInBranch?.branchEmail }))}
                             onDeleteDoctor={onDeleteDoctor}
                         />
                     )}
 
-                    {/* ── MANAGE BRANCHES VIEW ── */}
-                    {activeSidebarItem === 'Manage Branches' && (
-                        <>
-                            <header className="content-header">
-                                <div className="header-titles">
-                                    <h1>Manage Branches</h1>
-                                    <p>All registered clinic branches</p>
-                                </div>
-                            </header>
-                            <section className="referral-form-section glass-morphism" style={{ padding: '1.5rem' }}>
-                                {savedBranches.length === 0 ? (
-                                    <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                                        <Building2 size={48} style={{ marginBottom: '1rem', opacity: 0.3 }} />
-                                        <p>No branches saved yet.</p>
-                                        <p style={{ fontSize: '0.85rem' }}>Go back to Branch Management to add branches.</p>
-                                    </div>
-                                ) : (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                        {savedBranches.map((branch, idx) => (
-                                            <motion.div
-                                                key={branch.id}
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                transition={{ delay: idx * 0.05 }}
-                                                style={{
-                                                    display: 'flex', alignItems: 'center', gap: '1rem',
-                                                    padding: '1rem 1.25rem',
-                                                    background: 'rgba(255,255,255,0.05)',
-                                                    borderRadius: '12px',
-                                                    border: '1px solid rgba(255,255,255,0.08)'
-                                                }}
-                                            >
-                                                <div style={{
-                                                    width: '44px', height: '44px', borderRadius: '12px',
-                                                    background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                                                }}>
-                                                    <Building2 size={20} color="#fff" />
-                                                </div>
-                                                <div style={{ flex: 1 }}>
-                                                    <p style={{ fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>{branch.name}</p>
-                                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-                                                        📍 {branch.city}{branch.address ? ` · ${branch.address}` : ''}
-                                                        {branch.phone ? ` · 📞 ${branch.phone}` : ''}
-                                                    </p>
-                                                </div>
-                                                <span style={{
-                                                    padding: '0.25rem 0.75rem', borderRadius: '20px',
-                                                    background: 'rgba(20,184,166,0.15)', color: 'var(--primary)',
-                                                    fontSize: '0.75rem', fontWeight: 600
-                                                }}>Active</span>
-                                            </motion.div>
-                                        ))}
-                                    </div>
-                                )}
-                            </section>
-                        </>
+                    {/* ── MANAGE BRANCHES VIEW (DIRECTOR ONLY) ── */}
+                    {activeSidebarItem === 'Manage Branches' && isDirector(userEmail) && (
+                        <ManageBranches 
+                            userEmail={userEmail}
+                            userRole={userRole}
+                        />
                     )}
 
                     {/* ── CREATE FORM VIEW ── */}

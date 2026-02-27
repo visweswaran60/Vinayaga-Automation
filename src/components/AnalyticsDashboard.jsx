@@ -11,6 +11,7 @@ import {
     Calendar,
     Filter
 } from 'lucide-react';
+import { getUserRole, isDirector } from '../utils/roleHelpers';
 import {
     getAllForms,
     getAllBranches,
@@ -29,29 +30,55 @@ import {
     calculateOverallNotificationRate
 } from '../utils/analyticsHelpers';
 
-const AnalyticsDashboard = () => {
+const AnalyticsDashboard = ({ userEmail }) => {
     const [dateRange, setDateRange] = useState('30days');
     const [selectedBranch, setSelectedBranch] = useState('all');
     const [allForms, setAllForms] = useState([]);
     const [allBranches, setAllBranches] = useState([]);
+    const [userRole, setUserRole] = useState('branch');
 
     useEffect(() => {
+        // Determine user role
+        const role = getUserRole(userEmail);
+        setUserRole(role);
+        
+        // For branch users, set selectedBranch to their email
+        if (role === 'branch') {
+            setSelectedBranch(userEmail);
+        }
+        
         loadData();
-    }, []);
+    }, [userEmail]);
 
     const loadData = () => {
         setAllForms(getAllForms());
         setAllBranches(getAllBranches());
     };
 
-    // Memoized filtered forms
+    // Memoized filtered forms with role-based access control
     const filteredForms = useMemo(() => {
-        return filterForms(
-            allForms, 
-            dateRange, 
-            selectedBranch === 'all' ? null : selectedBranch
-        );
-    }, [allForms, dateRange, selectedBranch]);
+        let branchFilter = null;
+        
+        if (userRole === 'branch') {
+            // Branch users can ONLY see their own data
+            branchFilter = userEmail;
+        } else if (userRole === 'director') {
+            // Directors can see all or specific branch
+            branchFilter = selectedBranch === 'all' ? null : selectedBranch;
+        }
+        
+        return filterForms(allForms, dateRange, branchFilter);
+    }, [allForms, dateRange, selectedBranch, userRole, userEmail]);
+
+    // Memoized branches with role-based filtering
+    const visibleBranches = useMemo(() => {
+        if (userRole === 'branch') {
+            // Branch users only see their own branch
+            return allBranches.filter(b => b.branchEmail === userEmail);
+        }
+        // Directors see all branches
+        return allBranches;
+    }, [allBranches, userRole, userEmail]);
 
     // Memoized metrics
     const metrics = useMemo(() => ({
@@ -61,17 +88,17 @@ const AnalyticsDashboard = () => {
         whatsappSent: calculateWhatsAppSent(filteredForms),
         emailSent: calculateEmailSent(filteredForms),
         archivedCases: calculateArchivedCases(filteredForms),
-        activeBranches: calculateActiveBranches(allBranches, filteredForms),
-        avgPatientsPerBranch: calculateAvgPatientsPerBranch(allBranches, filteredForms),
+        activeBranches: calculateActiveBranches(visibleBranches, filteredForms),
+        avgPatientsPerBranch: calculateAvgPatientsPerBranch(visibleBranches, filteredForms),
         whatsappRate: calculateWhatsAppRate(filteredForms),
         emailRate: calculateEmailRate(filteredForms),
         overallNotificationRate: calculateOverallNotificationRate(filteredForms)
-    }), [filteredForms, allBranches]);
+    }), [filteredForms, visibleBranches]);
 
-    // Memoized branch data
+    // Memoized branch data with role-based filtering
     const branchData = useMemo(() => {
-        return getPatientsByBranch(allBranches, filteredForms);
-    }, [allBranches, filteredForms]);
+        return getPatientsByBranch(visibleBranches, filteredForms);
+    }, [visibleBranches, filteredForms]);
 
     const dateRangeOptions = [
         { value: '7days', label: 'Last 7 Days' },
@@ -104,21 +131,24 @@ const AnalyticsDashboard = () => {
                     </select>
                 </div>
 
-                <div className="filter-group">
-                    <Filter size={18} className="filter-icon" />
-                    <select 
-                        className="filter-select"
-                        value={selectedBranch}
-                        onChange={(e) => setSelectedBranch(e.target.value)}
-                    >
-                        <option value="all">All Branches</option>
-                        {allBranches.map(branch => (
-                            <option key={branch.id} value={branch.branchEmail}>
-                                {branch.branchName}
-                            </option>
-                        ))}
-                    </select>
-                </div>
+                {/* Branch filter - ONLY visible to directors */}
+                {isDirector(userEmail) && (
+                    <div className="filter-group">
+                        <Filter size={18} className="filter-icon" />
+                        <select 
+                            className="filter-select"
+                            value={selectedBranch}
+                            onChange={(e) => setSelectedBranch(e.target.value)}
+                        >
+                            <option value="all">All Branches</option>
+                            {allBranches.map(branch => (
+                                <option key={branch.id} value={branch.branchEmail}>
+                                    {branch.branchName}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                )}
             </div>
 
             {/* Metric Cards */}
