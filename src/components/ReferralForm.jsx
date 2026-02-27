@@ -114,6 +114,10 @@ const ReferralForm = ({ onLogout, loggedInBranch, savedDoctors = [], onAddDoctor
                     setValidationError('Patient Phone Number is required');
                     return false;
                 }
+                if (!dicomFile) {
+                    setValidationError('DICOM file upload is required');
+                    return false;
+                }
                 return true;
 
             case 3: // Diagnostic Services
@@ -624,11 +628,11 @@ const ReferralForm = ({ onLogout, loggedInBranch, savedDoctors = [], onAddDoctor
                                             <div className="patient-grid-v2">
                                                 <div className="custom-input-card">
                                                     <label>Patient ID <span className="req">*</span></label>
-                                                    <input type="text" name="patientId" value={patientData.patientId} onChange={handlePatientChange} placeholder="123" required />
+                                                    <input type="text" name="patientId" value={patientData.patientId} onChange={handlePatientChange} placeholder="e.g., P-2024-001" required />
                                                 </div>
                                                 <div className="custom-input-card">
                                                     <label>Patient Name <span className="req">*</span></label>
-                                                    <input type="text" name="patientName" value={patientData.patientName} onChange={handlePatientChange} placeholder="123" required />
+                                                    <input type="text" name="patientName" value={patientData.patientName} onChange={handlePatientChange} placeholder="Enter patient's full name" required />
                                                 </div>
                                                 <div className="custom-input-card">
                                                     <label>Age</label>
@@ -660,7 +664,7 @@ const ReferralForm = ({ onLogout, loggedInBranch, savedDoctors = [], onAddDoctor
 
                                         <div className="upload-boxes-container">
                                             <div className="upload-section">
-                                                <div className="upload-section-title">Upload Diagnostic Report</div>
+                                                <div className="upload-section-title">Upload Diagnostic Report <span className="optional-badge">(Optional)</span></div>
                                                 <div className={`upload-box primary-dash ${diagnosticFile ? 'has-file' : ''}`} onClick={() => diagnosticRef.current?.click()}>
                                                     <input type="file" ref={diagnosticRef} style={{ display: 'none' }} accept=".pdf,.doc,.docx" onChange={(e) => { if (e.target.files?.[0]) setDiagnosticFile(e.target.files[0]) }} />
                                                     {diagnosticFile ? (
@@ -681,8 +685,8 @@ const ReferralForm = ({ onLogout, loggedInBranch, savedDoctors = [], onAddDoctor
                                                 </div>
                                             </div>
                                             <div className="upload-section">
-                                                <div className="upload-section-title">Upload DICOM Files</div>
-                                                <div className={`upload-box ${dicomFile ? 'has-file' : ''}`} onClick={() => dicomRef.current?.click()}>
+                                                <div className="upload-section-title">Upload DICOM Files <span className="req">*</span></div>
+                                                <div className={`upload-box ${dicomFile ? 'has-file' : ''} ${!dicomFile ? 'upload-required' : ''}`} onClick={() => dicomRef.current?.click()}>
                                                     <input type="file" ref={dicomRef} style={{ display: 'none' }} accept=".dcm,.zip" onChange={(e) => { if (e.target.files?.[0]) setDicomFile(e.target.files[0]) }} />
                                                     {dicomFile ? (
                                                         <>

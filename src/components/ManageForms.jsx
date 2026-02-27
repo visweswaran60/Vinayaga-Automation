@@ -293,9 +293,9 @@ const ManageForms = ({ forms = [], activeBranch = 'Main Clinic', onNewForm, onUp
                         </div>
                         <div className="upload-modal-body">
                             <div className="patient-upload-info">
-                                <span className="p-id-badge">{selectedUploadForm?.patientId || '123'}</span>
-                                <span className="p-name">{selectedUploadForm?.patientName || '123'}</span>
-                                <div className="p-doctor">Referring Doctor: Dr. {selectedUploadForm?.doctorName || 'vichu'}</div>
+                                <span className="p-id-badge">{selectedUploadForm?.patientId || 'N/A'}</span>
+                                <span className="p-name">{selectedUploadForm?.patientName || 'Unknown Patient'}</span>
+                                <div className="p-doctor">Referring Doctor: Dr. {selectedUploadForm?.doctorName || 'Not Specified'}</div>
                             </div>
                             <div className={`upload-dropzone ${selectedFile ? 'has-file' : ''}`} onClick={() => fileInputRef.current?.click()}>
                                 <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".pdf" onChange={handleFileChange} />
