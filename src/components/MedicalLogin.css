@@ -1,0 +1,169 @@
+.medical-login-wrapper {
+    min-height: 100vh;
+    width: 100vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    font-family: 'Outfit', sans-serif;
+    padding: 1rem;
+    box-sizing: border-box;
+    position: fixed;
+    top: 0;
+    left: 0;
+    overflow-y: auto;
+}
+
+.medical-login-card {
+    background: #f0fdf9;
+    /* light pastel green */
+    border-radius: 1.5rem;
+    padding: 3rem 2.5rem;
+    width: 100%;
+    max-width: 440px;
+    box-shadow: 0 20px 40px rgba(13, 148, 136, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.medical-login-icon-wrapper {
+    background: #0d9488;
+    color: white;
+    width: 56px;
+    height: 56px;
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 8px 16px rgba(13, 148, 136, 0.25);
+}
+
+.medical-login-brand {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #064e3b;
+    text-transform: uppercase;
+    margin-bottom: 0.35rem;
+    letter-spacing: 0.05em;
+    text-align: center;
+}
+
+.medical-login-subtitle {
+    font-size: 0.9rem;
+    color: #047857;
+    opacity: 0.8;
+    margin-bottom: 2.5rem;
+    font-weight: 400;
+    text-align: center;
+}
+
+.medical-login-form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.medical-login-input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.medical-login-input-icon {
+    position: absolute;
+    left: 1.25rem;
+    color: #047857;
+    opacity: 0.7;
+}
+
+.medical-login-input {
+    width: 100%;
+    padding: 1rem 1rem 1rem 3.25rem;
+    border: 2px solid rgba(13, 148, 136, 0.15);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.9);
+    font-family: inherit;
+    font-size: 1rem;
+    color: #064e3b;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+.medical-login-input:focus {
+    outline: none;
+    border-color: #0d9488;
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.1);
+}
+
+.medical-login-input::placeholder {
+    color: #047857;
+    opacity: 0.5;
+}
+
+.medical-login-forgot {
+    text-align: right;
+    margin-top: -0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.medical-login-forgot a {
+    color: #0d9488;
+    font-size: 0.85rem;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+.medical-login-forgot a:hover {
+    text-decoration: underline;
+    color: #0f766e;
+}
+
+.medical-login-button {
+    background: #0d9488;
+    color: white;
+    border: none;
+    border-radius: 1rem;
+    padding: 1.125rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(13, 148, 136, 0.25);
+    font-family: inherit;
+}
+
+.medical-login-button:hover {
+    background: #0f766e;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(13, 148, 136, 0.35);
+}
+
+.medical-login-footer {
+    text-align: center;
+    margin-top: 2rem;
+    font-size: 0.9rem;
+    color: #047857;
+    opacity: 0.9;
+}
+
+.medical-login-footer a {
+    color: #0d9488;
+    font-weight: 700;
+    text-decoration: none;
+    transition: color 0.3s ease;
+    margin-left: 0.35rem;
+}
+
+.medical-login-footer a:hover {
+    text-decoration: underline;
+    color: #0f766e;
+}
