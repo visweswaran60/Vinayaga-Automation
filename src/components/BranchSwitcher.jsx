@@ -25,10 +25,10 @@ const BranchSwitcher = ({ userEmail, userRole, onBranchChange }) => {
     const loadBranches = () => {
         const saved = localStorage.getItem('registeredBranches');
         const allBranches = saved ? JSON.parse(saved) : [];
-        
-        // Filter active branches owned by this director
+
+        // Filter active branches owned by this director (using both directorEmail and masterEmail for generic masters)
         const directorBranches = allBranches.filter(
-            b => b.directorEmail === userEmail && b.isActive !== false
+            b => (b.directorEmail === userEmail || b.masterEmail === userEmail) && b.isActive !== false
         );
         setBranches(directorBranches);
     };
@@ -85,7 +85,7 @@ const BranchSwitcher = ({ userEmail, userRole, onBranchChange }) => {
 
     return (
         <div className="branch-switcher" ref={dropdownRef}>
-            <button 
+            <button
                 className="branch-switcher-btn"
                 onClick={() => setIsOpen(!isOpen)}
             >
@@ -104,7 +104,7 @@ const BranchSwitcher = ({ userEmail, userRole, onBranchChange }) => {
                     <div className="branch-switcher-header">
                         <span>Select Branch</span>
                         {activeBranch && (
-                            <button 
+                            <button
                                 className="branch-switcher-clear"
                                 onClick={handleClearSelection}
                             >

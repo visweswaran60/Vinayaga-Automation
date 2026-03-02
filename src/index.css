@@ -397,35 +397,55 @@ body {
 
 /* Sidebar */
 .referral-sidebar {
-  width: 280px;
+  width: 80px;
   background: var(--primary-dark);
   color: #ffffff;
-  padding: 2.5rem 1.5rem;
+  padding: 2.5rem 1rem;
   display: flex;
   flex-direction: column;
   position: sticky;
   top: 0;
   height: 100vh;
   z-index: 100;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-x: hidden;
+}
+
+.referral-sidebar:hover {
+  width: 280px;
 }
 
 .sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   margin-bottom: 3rem;
-  padding: 0 1rem;
+  padding: 0 0.5rem;
+  white-space: nowrap;
 }
 
-.sidebar-brand h2 {
+.brand-icon-wrapper {
+  min-width: 24px;
+  display: flex;
+  justify-content: center;
+  color: var(--primary);
+}
+
+.brand-text {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  overflow: hidden;
+}
+
+.referral-sidebar:hover .brand-text {
+  opacity: 1;
+  transition-delay: 0.1s;
+}
+
+.brand-text h2 {
   font-size: 1.25rem;
-  /* Reduced from 1.5rem */
   font-weight: 700;
   letter-spacing: -0.02em;
-}
-
-.sidebar-brand p {
-  font-size: 0.95rem;
-  /* Reduced from 1.1rem */
-  opacity: 0.9;
-  margin-top: -0.25rem;
 }
 
 .brand-subtext {
@@ -434,7 +454,7 @@ body {
   opacity: 0.5;
   letter-spacing: 0.05em;
   display: block;
-  margin-top: 0.5rem;
+  margin-top: 0.25rem;
 }
 
 .sidebar-nav {
@@ -447,21 +467,34 @@ body {
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  /* Reduced gap */
-  padding: 0.65rem 1rem;
-  /* Reduced padding */
+  gap: 1rem;
+  padding: 0.65rem 0.5rem;
   color: rgba(255, 255, 255, 0.7);
   background: transparent;
   border: none;
   border-radius: 0.6rem;
   font-size: 0.85rem;
-  /* Reduced font size */
   font-weight: 600;
   cursor: pointer;
   transition: all 0.25s ease;
   width: 100%;
   text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.nav-item svg {
+  min-width: 18px;
+}
+
+.nav-item span {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.referral-sidebar:hover .nav-item span {
+  opacity: 1;
+  transition-delay: 0.1s;
 }
 
 .nav-item:hover,
@@ -498,9 +531,11 @@ body {
   gap: 1rem;
   margin-bottom: 1.5rem;
   padding: 0 0.5rem;
+  white-space: nowrap;
 }
 
 .profile-img {
+  min-width: 40px;
   width: 40px;
   height: 40px;
   background: rgba(255, 255, 255, 0.1);
@@ -508,6 +543,17 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.profile-info {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  overflow: hidden;
+}
+
+.referral-sidebar:hover .profile-info {
+  opacity: 1;
+  transition-delay: 0.1s;
 }
 
 .user-email {
@@ -527,9 +573,9 @@ body {
 .btn-sidebar-logout {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1rem;
   width: 100%;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 0.65rem;
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #ffffff;
@@ -537,6 +583,22 @@ body {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.btn-sidebar-logout svg {
+  min-width: 18px;
+}
+
+.btn-sidebar-logout span {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.referral-sidebar:hover .btn-sidebar-logout span {
+  opacity: 1;
+  transition-delay: 0.1s;
 }
 
 .btn-sidebar-logout:hover {

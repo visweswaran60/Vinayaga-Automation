@@ -6,11 +6,11 @@ import ReferralForm from './components/ReferralForm';
 import './index.css';
 import { auth } from './config/firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
-import { 
-  setCurrentHospitalId, 
-  clearHospitalContext, 
+import {
+  setCurrentHospitalId,
+  clearHospitalContext,
   deriveHospitalIdFromEmail,
-  migrateLegacyData 
+  migrateLegacyData
 } from './utils/tenantHelpers';
 
 function App() {
@@ -59,12 +59,12 @@ function App() {
       clearTimeout(safetyTimer);
       if (user) {
         console.log('✅ [App] User detected:', user.email, 'UID:', user.uid);
-        
+
         // CRITICAL: Set hospital context for tenant isolation
         const hospitalId = deriveHospitalIdFromEmail(user.email);
         setCurrentHospitalId(hospitalId);
         console.log('✅ [App] Hospital context set:', hospitalId);
-        
+
         // Look up branch data from localStorage
         const branches = JSON.parse(localStorage.getItem('registeredBranches') || '[]');
         const branch = branches.find(b => b.branchEmail.toLowerCase() === user.email.toLowerCase());
@@ -75,7 +75,13 @@ function App() {
           setCurrentPage('dashboard');
         } else {
           console.log('⚠️ [App] No branch data in localStorage for this user, using fallback');
-          setLoggedInBranch({ branchName: 'Branch', branchEmail: user.email, hospitalName: 'Vinayaga Automation' });
+
+          // Try to look up hospitalName from organizations if user is a master/director without associated branch
+          const orgs = JSON.parse(localStorage.getItem('organizations') || '[]');
+          const org = orgs.find(o => o.masterEmail === user.email);
+          const activeHospitalName = org ? org.hospitalName : 'Hospital';
+
+          setLoggedInBranch({ branchName: 'Branch', branchEmail: user.email, hospitalName: activeHospitalName });
           setCurrentPage('dashboard');
         }
       } else {
@@ -166,10 +172,10 @@ function App() {
       console.log('🔓 [Auth] Signing out...');
       await signOut(auth);
       console.log('✅ [Auth] Signed out');
-      
+
       // CRITICAL: Clear hospital context on logout
       clearHospitalContext();
-      
+
       localStorage.removeItem('currentPage');
       setLoggedInBranch(null);
       navigate('auth');
@@ -181,35 +187,31 @@ function App() {
   const handleSaveSuccess = () => navigate('dashboard');
 
   const handleAddDoctor = (newDoctor) => {
-    setSavedDoctors(prev => {
-      const updated = [...prev, newDoctor];
-      localStorage.setItem('savedDoctors', JSON.stringify(updated));
-      return updated;
-    });
+    const prev = JSON.parse(localStorage.getItem('savedDoctors') || '[]');
+    const updated = [...prev, newDoctor];
+    localStorage.setItem('savedDoctors', JSON.stringify(updated));
+    setSavedDoctors(updated);
   };
 
   const handleDeleteDoctor = (idx) => {
-    setSavedDoctors(prev => {
-      const updated = prev.filter((_, i) => i !== idx);
-      localStorage.setItem('savedDoctors', JSON.stringify(updated));
-      return updated;
-    });
+    const prev = JSON.parse(localStorage.getItem('savedDoctors') || '[]');
+    const updated = prev.filter((_, i) => i !== idx);
+    localStorage.setItem('savedDoctors', JSON.stringify(updated));
+    setSavedDoctors(updated);
   };
 
   const handleAddBranch = (newBranch) => {
-    setSavedBranches(prev => {
-      const updated = [newBranch, ...prev];
-      localStorage.setItem('savedBranches', JSON.stringify(updated));
-      return updated;
-    });
+    const prev = JSON.parse(localStorage.getItem('savedBranches') || '[]');
+    const updated = [newBranch, ...prev];
+    localStorage.setItem('savedBranches', JSON.stringify(updated));
+    setSavedBranches(updated);
   };
 
   const handleDeleteBranch = (id) => {
-    setSavedBranches(prev => {
-      const updated = prev.filter(b => b.id !== id);
-      localStorage.setItem('savedBranches', JSON.stringify(updated));
-      return updated;
-    });
+    const prev = JSON.parse(localStorage.getItem('savedBranches') || '[]');
+    const updated = prev.filter(b => b.id !== id);
+    localStorage.setItem('savedBranches', JSON.stringify(updated));
+    setSavedBranches(updated);
   };
 
   if (authLoading) {

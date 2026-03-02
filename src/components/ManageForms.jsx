@@ -172,6 +172,7 @@ const ManageForms = ({ forms = [], activeBranch = 'Main Clinic', onNewForm, onUp
                     <table className="mf-table-v2">
                         <thead>
                             <tr>
+                                <th>NO.</th>
                                 <th>PATIENT ID</th>
                                 <th>PATIENT NAME</th>
                                 <th>CASE STATUS</th>
@@ -189,6 +190,7 @@ const ManageForms = ({ forms = [], activeBranch = 'Main Clinic', onNewForm, onUp
 
                                 return (
                                     <tr key={f.id || i}>
+                                        <td>{i + 1}</td>
                                         <td><strong>{f.patientId || '—'}</strong></td>
                                         <td>{f.patientName || '—'}</td>
                                         <td>
@@ -240,33 +242,33 @@ const ManageForms = ({ forms = [], activeBranch = 'Main Clinic', onNewForm, onUp
                                         </td>
                                         <td>
                                             <div className="table-actions">
-                                                <button 
-                                                    className="action-btn view" 
-                                                    data-tooltip="View" 
+                                                <button
+                                                    className="action-btn view"
+                                                    data-tooltip="View"
                                                     title="View"
                                                     onClick={() => handleViewForm(f)}
                                                 >
                                                     <Eye size={16} />
                                                 </button>
-                                                <button 
-                                                    className="action-btn edit" 
-                                                    data-tooltip="Edit" 
+                                                <button
+                                                    className="action-btn edit"
+                                                    data-tooltip="Edit"
                                                     title="Edit"
                                                     onClick={() => handleEditForm(f)}
                                                 >
                                                     <Edit2 size={16} />
                                                 </button>
-                                                <button 
-                                                    className="action-btn archive" 
+                                                <button
+                                                    className="action-btn archive"
                                                     data-tooltip={f.archived ? "Unarchive" : "Archive"}
                                                     title={f.archived ? "Unarchive" : "Archive"}
                                                     onClick={() => handleArchiveToggle(f)}
                                                 >
                                                     <Archive size={16} />
                                                 </button>
-                                                <button 
-                                                    className="action-btn delete" 
-                                                    data-tooltip="Delete" 
+                                                <button
+                                                    className="action-btn delete"
+                                                    data-tooltip="Delete"
                                                     title="Delete"
                                                     onClick={() => handleDeleteClick(f.id)}
                                                 >

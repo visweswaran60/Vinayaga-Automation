@@ -16,7 +16,7 @@ export const getEffectiveBranchEmail = (userEmail, userRole) => {
         // If no branch selected, return null to show all data
         return null;
     }
-    
+
     // Branch users see only their own data
     return userEmail;
 };
@@ -29,7 +29,7 @@ export const filterByBranch = (items, branchEmail) => {
         // No filter - return all items (for directors viewing all branches)
         return items;
     }
-    
+
     return items.filter(item => item.branchEmail === branchEmail);
 };
 
@@ -40,19 +40,19 @@ export const getUserRole = (userEmail) => {
     // Check if user is stored as director
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const user = users.find(u => u.email === userEmail);
-    
+
     if (user && user.role) {
         return user.role;
     }
-    
-    // Check if user email matches any branch's directorEmail
+
+    // Check if user email matches any branch's directorEmail or masterEmail
     const branches = JSON.parse(localStorage.getItem('registeredBranches') || '[]');
-    const isDirector = branches.some(b => b.directorEmail === userEmail);
-    
+    const isDirector = branches.some(b => b.directorEmail === userEmail || b.masterEmail === userEmail);
+
     if (isDirector) {
         return 'director';
     }
-    
+
     // Default to branch role
     return 'branch';
 };
@@ -69,7 +69,7 @@ export const isDirector = (userEmail) => {
  */
 export const getDirectorBranches = (directorEmail) => {
     const branches = JSON.parse(localStorage.getItem('registeredBranches') || '[]');
-    return branches.filter(b => b.directorEmail === directorEmail);
+    return branches.filter(b => b.directorEmail === directorEmail || b.masterEmail === directorEmail);
 };
 
 /**
@@ -99,7 +99,7 @@ export const getBranchDisplayName = (userEmail, userRole) => {
         const activeBranch = getActiveBranchData();
         return activeBranch ? activeBranch.branchName : 'All Branches';
     }
-    
+
     // For branch users, get their branch name
     const branches = JSON.parse(localStorage.getItem('registeredBranches') || '[]');
     const branch = branches.find(b => b.branchEmail === userEmail);
@@ -118,7 +118,7 @@ export const canManageBranches = (userEmail) => {
  */
 export const filterBranchesByDirector = (directorEmail) => {
     const branches = JSON.parse(localStorage.getItem('registeredBranches') || '[]');
-    return branches.filter(b => b.directorEmail === directorEmail);
+    return branches.filter(b => b.directorEmail === directorEmail || b.masterEmail === directorEmail);
 };
 
 /**
@@ -127,7 +127,7 @@ export const filterBranchesByDirector = (directorEmail) => {
 export const getBranchStats = (branchEmail) => {
     const forms = JSON.parse(localStorage.getItem('savedForms') || '[]');
     const branchForms = forms.filter(f => f.branchEmail === branchEmail);
-    
+
     return {
         totalPatients: branchForms.length,
         activePatients: branchForms.filter(f => !f.archived).length,
